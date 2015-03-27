@@ -2,14 +2,14 @@
 class MailChimpShortcode {
   var $namespace = "mailchimp_shortcode";
   var $slug = "mcs";
-  var $version = '1.0.0';
+  var $version = '1.0.2';
   var $plugin_dirname;
 
   /**
    * Initialize the plugin
-   * 
+   *
    * @uses add_action()
-   * @uses add_shortcode() 
+   * @uses add_shortcode()
    */
   public function __construct() {
     $this->plugin_dirname = dirname( dirname( __FILE__ ) );
@@ -24,9 +24,9 @@ class MailChimpShortcode {
 
   /**
    * Clean unnecessary keys from MailChimp groupings arrays
-   * 
+   *
    * @param (array) $value The grouping array to clean
-   * 
+   *
    * @return (array)
    */
   private function _clean_groups( $value ) {
@@ -38,10 +38,10 @@ class MailChimpShortcode {
    * Form submission processor for `wp_ajax_mailchimp_shortcode` and `wp_ajax_nopriv_mailchimp_shortcode` action
    *
    * Validates email subscription form submission and subscribes the user to the
-   * specified list and groupings using the Mailchimp API. Redirects back to the 
+   * specified list and groupings using the Mailchimp API. Redirects back to the
    * URL submitted from and adds `error_code` and `error_message` query parameters
-   * to the redirect URL if an error occurred. 
-   * 
+   * to the redirect URL if an error occurred.
+   *
    * @uses Mailchimp
    * @uses WP_Error
    * @uses Exception->getMessage()
@@ -65,7 +65,7 @@ class MailChimpShortcode {
     // Extract the MailChimp fields from the form submission
     $mc = (array) $_REQUEST[$this->slug];
     // Redirect location after form submission
-    $redirect_url = $_REQUEST['_wp_http_referer'];
+    $redirect_url = isset( $_REQUEST['redirect_to'] ) && !empty( $_REQUEST['redirect_to'] ) ? $_REQUEST['redirect_to'] : $_REQUEST['_wp_http_referer'];
     // Response validity
     $response = true;
 
@@ -96,18 +96,18 @@ class MailChimpShortcode {
         $this->MCAPI->lists->subscribe(
           // MailChimp list ID
           "{$mc['list_id']}",
-          // Email to subscribe 
-          array( 'email' => "{$mc['email']}" ), 
+          // Email to subscribe
+          array( 'email' => "{$mc['email']}" ),
           // Merge vars to send with the subscription
-          $merge_vars, 
+          $merge_vars,
           // Email format
-          'html', 
+          'html',
           // Double opt-in preference
-          !!$mc['double_optin'], 
+          !!$mc['double_optin'],
           // Update existing records
-          true, 
+          true,
           // Replace interest groups
-          true, 
+          true,
           // Send welcome email preference
           !!$mc['send_welcome']
         );
@@ -127,15 +127,20 @@ class MailChimpShortcode {
       ), $redirect_url );
     }
 
-    wp_redirect( $redirect_url );
+    if( $_SERVER['HTTP_X_REQUESTED_WITH'] == "XMLHttpRequest" ) {
+      print_r( $response );
+    } else {
+      wp_redirect( $redirect_url );
+    }
+
     exit;
   }
 
   /**
    * MailChimp Form shortcode
-   * 
+   *
    * Renders the MailChimp form shortcode markup. Takes the following arguments:
-   * 
+   *
    * @param (string)  title                 Title text for the form
    * @param (string)  subtitle              Sub-title text for the form
    * @param (string)  footer_text           Footer text for the form
@@ -146,26 +151,28 @@ class MailChimpShortcode {
    * @param (string)  submit_label          Submit button label
    * @param (string)  groupings_#_(id|name) The name or ID of the grouping. (e.g. groupings_0_id="Foobar")
    * @param (string)  groupings_#_groups    A comma delimited list of groups in the grouping (e.g. groupings_0_groups="Group 1, Group 2")
-   * 
+   * @param (string)  redirect_to           Optional redirect location after form submission
+   *
    * Example shortcode with all parameters (line-breaks and indentation added for presentation):
-   * 
-   * [mailchimp_signup title="My Title" 
-   *                   subtitle="My Subtitle" 
-   *                   footer_text="Footer text appears" 
-   *                   list_id="0a2102bd" 
-   *                   double_optin="1" 
-   *                   send_welcome="1" 
-   *                   email_placeholder="email@domain.com" 
-   *                   submit_label="Submit" 
-   *                   groupings_0_name="Group Name" 
-   *                   groupings_0_groups="Group 1, Group 2" 
-   *                   groupings_1_id="124121" 
-   *                   groupings_1_groups="Group 1, Group 2"]
-   * 
+   *
+   * [mailchimp_signup title="My Title"
+   *                   subtitle="My Subtitle"
+   *                   footer_text="Footer text appears"
+   *                   list_id="0a2102bd"
+   *                   double_optin="1"
+   *                   send_welcome="1"
+   *                   email_placeholder="email@domain.com"
+   *                   submit_label="Submit"
+   *                   groupings_0_name="Group Name"
+   *                   groupings_0_groups="Group 1, Group 2"
+   *                   groupings_1_id="124121"
+   *                   groupings_1_groups="Group 1, Group 2"
+   *                   redirect_to="http://mydomain.com/destination-url"]
+   *
    * @uses admin_url()
    * @uses shortcode_atts()
    * @uses wp_nonce_field()
-   * 
+   *
    * @return (string)
    */
   public function shortcode( $atts ) {
@@ -178,13 +185,27 @@ class MailChimpShortcode {
       'send_welcome' => MAILCHIMP_SHORTCODE_SEND_WELCOME,
       'email_placeholder' => MAILCHIMP_SHORTCODE_PLACEHOLDER,
       'submit_label' => MAILCHIMP_SHORTCODE_SUBMIT_LABEL,
-      'groupings' => array()
+      'groupings' => array(),
+      'redirect_to' => false
     ), $atts ) );
 
     foreach( (array) $atts as $key => $val ) {
+      /**
+       * Match values:
+       *
+       * 0 - whole match
+       * 1 - index of the shortcode parameter set (0, 1, 2, etc.)
+       * 2 - identifier of the property of the parameter set (id, name, groups)
+       */
       if( preg_match( '/groupings_(\d+)_(id|name|groups)/', $key, $groupings_match ) && !empty( $groupings_match ) ) {
+        // Identifier logged for proper input field naming in the output HTML
         if( in_array( $groupings_match[2], array( 'id', 'name' ) ) ) $groupings[$groupings_match[1]]['identifier'] = $groupings_match[2];
-        $groupings[$groupings_match[1]][$groupings_match[2]] = $groupings_match[2] == "groups" ? explode( ",", $val ) : $val;
+
+        if( $groupings_match[2] == 'groups' ) {
+          $groupings[$groupings_match[1]][$groupings_match[2]] = array_map( 'trim', explode( ",", $val ) );
+        } else {
+          $groupings[$groupings_match[1]][$groupings_match[2]] = $val;
+        }
       }
     }
 

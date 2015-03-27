@@ -3,7 +3,7 @@
 Plugin Name: MailChimp Shortcode
 Plugin URI: http://filament.io/
 Description: Shortcode generator for MailChimp form
-Version: 1.0.0
+Version: 1.0.2
 Author: dtelepathy
 Author URI: http://www.dtelepathy.com/
 Contributors: kynatro, dtelepathy, dtlabs
@@ -28,15 +28,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 /**
  * MailChimp shortcode plugin initializer
- * 
- * This function is called on all pages and sets constants for base 
- * default option setting in use of the shortcode. Define any of these 
+ *
+ * This function is called on all pages and sets constants for base
+ * default option setting in use of the shortcode. Define any of these
  * constants in your theme's functions.php file to customize the default
  * values used in your website. All of these options can be overridden
  * on a per-shortcode use basis with the exception of the API key. See
  * the `shortcode()` method on the `MailChimpShortcode` PHP Class
  * for more details on the format of the override parameters.
- * 
+ *
  * @uses is_admin()
  * @uses MailChimpShortcode
  */
@@ -64,7 +64,7 @@ function mailchimp_shortcode_init(){
 
   if( !is_admin() || ( DOING_AJAX && basename( $_SERVER['PHP_SELF'] ) == "admin-ajax.php" ) ) {
     require dirname( __FILE__ ) . '/lib/mailchimp-shortcode.class.php';
-    
+
     new MailChimpShortcode();
   }
 }

@@ -19,5 +19,12 @@ This plugin simply provides a shortcode for output of a MailChimp subscription f
 To keep this plugin simple, there is no UI. All configuration options can be configured either by defining PHP constants or specifying options on the shortcode itself. For more information on defining constants, check out the in-line documentation in the primary `mailchimp-shortcode.php` file. For more information on shortcode parameters, checkout the in-line documentation in the `lib/mailchimp-shortcode.class.php` file on the `shortcode()` method.
 
 == Changelog ==
+= 1.0.2 =
+* Add redirect_to option to shortcode
+* Add support for AJAX response to shortcode submission
+
+= 1.0.1 =
+* Trim `groups` values in shortcode to ensure proper group names when sending to MailChimp
+
 = 1.0.0 =
 Initial release

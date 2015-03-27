@@ -7,10 +7,14 @@
     <input type="hidden" name="<?php echo $slug; ?>[double_optin]" value="<?php echo $double_optin ? 1 : 0; ?>">
     <input type="hidden" name="<?php echo $slug; ?>[send_welcome]" value="<?php echo $send_welcome ? 1 : 0; ?>">
 
+    <?php if( $redirect_to ): ?>
+      <input type="hidden" name="redirect_to" value="<?php echo $redirect_to; ?>">
+    <?php endif; ?>
+
     <?php $i = 0; foreach( $groupings as $grouping ): ?>
 
       <input type="hidden" name="<?php echo $slug; ?>[groupings][<?php echo $i; ?>][<?php echo $grouping['identifier']; ?>]" value="<?php echo $grouping[$grouping['identifier']]; ?>">
-      
+
       <?php foreach( $grouping['groups'] as $group ): ?>
         <input type="hidden" name="<?php echo $slug; ?>[groupings][<?php echo $i; ?>][groups][]" value="<?php echo $group; ?>">
       <?php endforeach; ?>
